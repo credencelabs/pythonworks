@@ -1,0 +1,169 @@
+from tkinter import *
+running = False
+import time
+ 
+rootWindow = Tk()
+rootWindow.title('AGV SYSTEMS - TIMER WINDOW')
+rootWindow.geometry("340x90+450+50")
+rootWindow.resizable(0,0)
+
+defaultColour = rootWindow.cget("bg")
+fnt="Times_New_Roman"
+sz="10"
+style="bold"
+
+fnt2="Verdana"
+sz2="10"
+style2="bold" 
+
+time1 = ''
+prevSec = ''
+mins = 0
+secs = 0
+hours = 4
+
+def cd():    
+    clock = Label(rootWindow, font=(fnt2,sz2,style2))
+    clock.grid(row = 1, column = 2)   
+    def tick():
+        global prevSec, time1, secs, mins, hours, running, num        
+        num=0
+        c=" "
+        if running:
+            newSec = time.strftime('%S')
+        else:
+            newSec = ''
+            prevSec = ''
+        if newSec != prevSec:
+            prevSec = newSec
+            secs = secs - 1
+            if secs < 0:                
+                secs = 59
+                mins = mins - 1
+                if mins < 0:
+                        fin=open('dischargingtimelog.txt')
+                        for line in fin:
+                                line = line.rstrip()
+                                if line.find('$Cyc:') == -1:
+                                        continue
+                                cycle=str(line)
+                                cycleNumberDisp=str(cycle[5:6])
+                                print("CYCLE NUM BEFORE:"+str(cycleNumberDisp))
+                                cycleNumber=int(cycleNumberDisp)                
+                        fin.close()
+                        if(cycleNumber==0 or cycleNumber <= 25):
+                                cycleNumber = cycleNumber+1                
+                        num=str(cycleNumber)
+                        print("Cycle:"+num)
+                        time2=time.strftime('%a %d %B %Y %H:%M:%S')
+                        fopen=open('dischargingtimelog.txt','w')                        
+                        fopen.write("$Cyc:"+num+"\n")
+                        fopen.write(str(time2))
+                        fopen.close()                
+                        c=" "
+                        fin=open('dischargingtimelog.txt')
+                        for line in fin:
+                                line = line.rstrip()
+                                if line.find('$Cyc:') == -1:
+                                        continue                    
+                                cycle=str(line)
+                                cycleNumberDisp=str(cycle[5:6])
+                                print("CYCLE NUM AFTER:"+str(cycleNumberDisp))
+                                cycleNumber=int(cycleNumberDisp)                
+                        fin.close()
+                        if((cycleNumber >= 1 or cycleNumber < 5)or(cycleNumber >= 9 or cycleNumber < 13) or (cycleNumber >= 17 or cycleNumber < 21)):                    
+                                c="DISCHARGING"
+                                fopen=open('dischargingtimelog.txt','a')
+                                fopen.write("\n"+c+"\n")
+                                fopen.close()
+                        elif((cycleNumber >= 5 or cycleNumber < 8)or (cycleNumber >= 13 or cycleNumber < 17) or (cycleNumber >= 21 or cycleNumber <= 25)):
+                                c="  CHARGING   "
+                                fopen=open('dischargingtimelog.txt','a')
+                                fopen.write("\n"+c+"\n")
+                                fopen.close()
+                        elif(cycleNumber > 25):
+                                num=0
+                                fopen=open('dischargingtimelog.txt','a')
+                                fopen.write("\n"+c+"\n")
+                                fopen.write("$Cyc:"+str(num))
+                                fopen.write(str(time2))
+                                fopen.close()
+                                stop_btn()
+                                time.sleep(5)
+                                reset_btn()
+                        else:
+                                pass
+                        cycle = Label(rootWindow, text=c, font=(fnt2,sz2,style2))
+                        cycle.grid(row = 0, column = 2)
+                        mins = 59
+                        hours = hours - 1
+                        if hours < 0: 
+                                hours = 4
+                                mins = 0
+                                secs = 0
+        #clock.config(bg='dark red')
+        time2 = '%02d:%02d:%02d' % (hours, mins, secs)
+        
+        # if time string has changed, update it
+        if time2 != time1:
+            time1 = time2
+            clock.config(text=time2)
+        # calls itself every 200 milliseconds
+        # to update the time display as needed
+        # could use >200 ms, but display gets jerky
+        clock.after(200, tick)
+     
+    tick()
+
+    def start_btn():
+        global running
+        clock.config(bg='green')
+        btn_start.config(state='disabled',background=defaultColour)
+        btn_stop.config(state='normal',bg='red')
+        btn_reset.config(state='disabled')
+        running = True
+
+    def stop_btn():
+        global running 
+        clock.config(bg='red')
+        btn_start.config(state='normal',bg='green')
+        btn_stop.config(state='disabled',bg=defaultColour)
+        btn_reset.config(state='normal')
+        running = False
+
+    def reset_btn():
+        global prevSec, time1, secs, mins, hours, running 
+        clock.config(bg=defaultColour)
+        cycle = Label(rootWindow, text="                       ", font=(fnt2,sz2,style2))
+        cycle.grid(row = 0, column = 2)
+        time2=time.strftime('%a %d %B %Y %H:%M:%S')
+        fopen=open('dischargingtimelog.txt','w')                        
+        fopen.write("$Cyc:0\n")
+        fopen.write(str(time2))
+        fopen.close()
+        hours = 4
+        mins = 0
+        secs = 0
+        prevSec = ''
+        time1 = ''
+        running = False
+        btn_stop.config(state='disabled',bg=defaultColour)
+        btn_start.config(state='normal',bg='green')
+        btn_reset.config(state='disabled')
+    def exit():
+        rootWindow.destroy()
+
+    btn_reset = Button(rootWindow, state='disabled', text = 'RESET', font=(fnt,sz,style),command = reset_btn)
+    btn_reset.grid(sticky=EW, row = 4, column = 1, padx = 5, pady = (5,2))
+    
+    btn_start = Button(rootWindow, text = 'START', font=(fnt,sz,style), command = start_btn)
+    btn_start.grid(sticky=EW, row = 4, column = 2, padx = 5, pady = (5,2))
+    
+    btn_stop = Button(rootWindow, state='disabled', text = 'STOP', font=(fnt,sz,style), command = stop_btn)
+    btn_stop.grid(sticky=EW, row = 4, column = 3, padx = 5, pady = (5,2))
+    
+    btn_exit = Button(rootWindow, text = 'EXIT', font=(fnt,sz,style), command = exit)
+    btn_exit.grid(sticky=EW, row = 4, column = 4, padx = 5, pady = (5,2))
+
+    rootWindow.mainloop()
+cd()
